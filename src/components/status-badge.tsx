@@ -8,11 +8,11 @@ const colors: Record<ProspectStatus, string> = {
   "Réponse reçue": "bg-emerald-50 text-emerald-700",
 };
 
-export function StatusBadge({ status }: { status: ProspectStatus }) {
+export function StatusBadge({ status, compact = false }: { status: ProspectStatus; compact?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${colors[status]}`}>
-      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-      {status}
+    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full py-1 text-xs font-medium ${compact ? "px-2" : "px-2.5 whitespace-nowrap"} ${colors[status]}`}>
+      <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
+      <span>{status}</span>
     </span>
   );
 }

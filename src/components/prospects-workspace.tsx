@@ -16,7 +16,7 @@ export function ProspectsWorkspace() {
   return (
     <>
       <PageHeader label="Prospects" />
-      <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
+      <main id="main-content" className="w-full min-w-0 px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="mb-2 text-xs font-semibold tracking-widest text-indigo-600 uppercase">Votre réseau commercial</p>

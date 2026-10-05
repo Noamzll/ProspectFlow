@@ -178,68 +178,80 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
         role="region"
         aria-label="Tableau des prospects, défilement horizontal possible"
         tabIndex={0}
-        className="relative overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"
+        className="relative overflow-x-auto [container-type:inline-size] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"
       >
-        <table className="w-full min-w-300 text-left text-sm">
+        <table className="w-full min-w-176 table-fixed text-left text-sm leading-5">
           <caption className="sr-only">
             Liste des prospects : entreprise, secteur, ville, email, site internet, statut et prochaine action.
           </caption>
+          {/* 100cqw = largeur du conteneur. On réserve 12,5 rem aux statuts et boutons ;
+              les autres colonnes partagent le reste, avec un minimum lisible sur mobile. */}
+          <colgroup>
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.20)" }} />
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.13)" }} />
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.11)" }} />
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.20)" }} />
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.15)" }} />
+            <col className="w-32" />
+            <col style={{ width: "calc((max(44rem, 100cqw) - 12.5rem) * 0.21)" }} />
+            <col className="w-18" />
+          </colgroup>
           <thead className="bg-slate-50/70 text-xs text-slate-500">
             <tr>
 
               {columns.map(({ key, label }) => (
-                <th key={key} scope="col" aria-sort={sort?.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"} className="px-4 py-3 font-medium">
-                  <button type="button" onClick={() => toggleSort(key)} aria-label={`Trier par ${label} (${sort?.key === key && sort.direction === "asc" ? "décroissant" : "croissant"})`} className="inline-flex items-center gap-2 whitespace-nowrap rounded text-left hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600">
-                    {label}
-                    {sort?.key === key ? (sort.direction === "asc" ? <ArrowUp className="size-3.5 text-indigo-600" aria-hidden="true" /> : <ArrowDown className="size-3.5 text-indigo-600" aria-hidden="true" />) : <ArrowUpDown className="size-3.5 text-slate-400" aria-hidden="true" />}
+                <th key={key} scope="col" aria-sort={sort?.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"} className="px-2 py-3 align-top font-medium">
+                  <button type="button" onClick={() => toggleSort(key)} aria-label={`Trier par ${label} (${sort?.key === key && sort.direction === "asc" ? "décroissant" : "croissant"})`} className="inline-flex max-w-full items-start gap-1 rounded text-left hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600">
+                    <span>{label}</span>
+                    {sort?.key === key ? (sort.direction === "asc" ? <ArrowUp className="mt-0.5 size-3.5 shrink-0 text-indigo-600" aria-hidden="true" /> : <ArrowDown className="mt-0.5 size-3.5 shrink-0 text-indigo-600" aria-hidden="true" />) : <ArrowUpDown className="mt-0.5 size-3.5 shrink-0 text-slate-400" aria-hidden="true" />}
                   </button>
                 </th>
               ))}
-              <th scope="col" className="px-4 py-3 font-medium">Actions</th>
+              <th scope="col" className="px-2 py-3 align-top font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {pageProspects.map((prospect) => (
               <tr key={prospect.id} className="hover:bg-slate-50/60">
-                <th scope="row" className="px-6 py-5 text-left font-medium">
-                  <div className="flex min-w-44 items-center gap-3">
-                    <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500">
+                <th scope="row" className="px-2 py-3 align-top text-left font-medium">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span aria-hidden="true" className="hidden size-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-semibold text-slate-500 xl:flex">
                       {prospect.company.slice(0, 2).toUpperCase()}
                     </span>
-                    <div>
-                      <Link href={`/prospects/${encodeURIComponent(prospect.id)}`} className="break-words hover:text-indigo-600 hover:underline">{prospect.company}</Link>
+                    <div className="min-w-0">
+                      <Link href={`/prospects/${encodeURIComponent(prospect.id)}`} className="[overflow-wrap:anywhere] hover:text-indigo-600 hover:underline">{prospect.company}</Link>
                       {prospect.isClient && <p className="mt-1 text-xs font-medium text-emerald-700">Client obtenu</p>}
                     </div>
                   </div>
                 </th>
-                <td className="px-4 py-5 text-slate-500">{prospect.sector}</td>
-                <td className="px-4 py-5 text-slate-500">{prospect.city}</td>
-                <td className="px-4 py-5">
+                <td className="px-2 py-3 align-top text-slate-500 [overflow-wrap:anywhere]">{prospect.sector}</td>
+                <td className="px-2 py-3 align-top text-slate-500 [overflow-wrap:anywhere]">{prospect.city}</td>
+                <td className="px-2 py-3 align-top [overflow-wrap:anywhere]">
                   {prospect.email ? <a href={`mailto:${prospect.email}`} className="text-slate-600 underline-offset-4 hover:text-indigo-600 hover:underline">
                     {prospect.email}
                   </a> : <span className="text-slate-400">Non renseigné</span>}
                 </td>
-                <td className="px-4 py-5">
+                <td className="px-2 py-3 align-top [overflow-wrap:anywhere]">
                   {prospect.website ? <a
                     href={prospect.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-600 underline-offset-4 hover:text-indigo-600 hover:underline"
+                    className="inline-flex max-w-full items-start gap-1 text-slate-600 underline-offset-4 hover:text-indigo-600 hover:underline"
                   >
-                    {new URL(prospect.website).hostname}
-                    <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                    <span className="min-w-0">{new URL(prospect.website).hostname}</span>
+                    <ArrowUpRight className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                     <span className="sr-only"> (nouvel onglet)</span>
                   </a> : <span className="text-slate-400">Non renseigné</span>}
                 </td>
-                <td className="px-4 py-5"><StatusBadge status={prospect.status} /></td>
-                <td className="min-w-48 px-6 py-5 text-slate-500">
-                  <p className="break-words">{prospect.nextAction || "Aucune action prévue"}</p>
+                <td className="px-2 py-3 align-top"><StatusBadge status={prospect.status} compact /></td>
+                <td className="px-2 py-3 align-top text-slate-500 [overflow-wrap:anywhere]">
+                  <p>{prospect.nextAction || "Aucune action prévue"}</p>
                   {prospect.nextActionDate && <p className="mt-1 text-xs">{formatActionDate(prospect.nextActionDate)}</p>}
                 </td>
-                <td className="px-4 py-5">
-                  <div className="flex gap-1">
-                    <button type="button" onClick={() => setEditing(prospect)} aria-label={`Modifier ${prospect.company}`} className="rounded-lg p-2 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"><Pencil className="size-4" aria-hidden="true" /></button>
-                    <button type="button" onClick={() => setDeleting(prospect)} aria-label={`Supprimer ${prospect.company}`} className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" aria-hidden="true" /></button>
+                <td className="px-2 py-3 align-top">
+                  <div className="flex">
+                    <button type="button" onClick={() => setEditing(prospect)} aria-label={`Modifier ${prospect.company}`} className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"><Pencil className="size-4" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => setDeleting(prospect)} aria-label={`Supprimer ${prospect.company}`} className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" aria-hidden="true" /></button>
                   </div>
                 </td>
               </tr>
