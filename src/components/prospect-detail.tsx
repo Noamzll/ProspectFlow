@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatActionDate } from "@/lib/prospect-validation";
 
 export function ProspectDetail({ id }: { id: string }) {
-  const { prospects, ready } = useProspects();
+  const { prospects, ready, busy, error } = useProspects();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -24,10 +24,10 @@ export function ProspectDetail({ id }: { id: string }) {
       <main id="main-content" className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
         <Link href="/prospects" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600"><ArrowLeft className="size-4" aria-hidden="true" />Retour aux prospects</Link>
         <StorageFeedback />
-        {!ready ? <p role="status">Chargement du prospect…</p> : !prospect ? (
+        {!ready ? <p role="status">{error ? "La fiche cloud n’a pas pu être chargée. Actualisez les données ci-dessus." : "Chargement du prospect…"}</p> : !prospect ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-8">
             <h1 className="text-2xl font-semibold">Prospect introuvable</h1>
-            <p className="mt-3 text-sm text-slate-500">Ce prospect n’existe pas dans ce navigateur ou a été supprimé.</p>
+            <p className="mt-3 text-sm text-slate-500">Ce prospect n’existe pas dans votre compte ou a été supprimé.</p>
             <Link href="/prospects" className="button-primary mt-6">Consulter les prospects</Link>
           </section>
         ) : (
@@ -39,8 +39,8 @@ export function ProspectDetail({ id }: { id: string }) {
                 <div className="mt-3 flex items-center gap-2"><StatusBadge status={prospect.status} />{prospect.isClient && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Client obtenu</span>}</div>
               </div>
               <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={() => setEditing(true)} className="button-primary"><Pencil className="size-4" aria-hidden="true" />Modifier</button>
-                <button type="button" onClick={() => setDeleting(true)} className="button-secondary text-red-600"><Trash2 className="size-4" aria-hidden="true" />Supprimer</button>
+                <button type="button" disabled={busy} onClick={() => setEditing(true)} className="button-primary"><Pencil className="size-4" aria-hidden="true" />Modifier</button>
+                <button type="button" disabled={busy} onClick={() => setDeleting(true)} className="button-secondary text-red-600"><Trash2 className="size-4" aria-hidden="true" />Supprimer</button>
               </div>
             </div>
             <div className="grid gap-5 md:grid-cols-2">
@@ -49,7 +49,7 @@ export function ProspectDetail({ id }: { id: string }) {
                 <dl className="mt-5 space-y-5 text-sm">
                   <div><dt className="text-slate-500">Email</dt><dd className="mt-1 break-all">{prospect.email ? <a href={`mailto:${prospect.email}`} className="text-indigo-600 hover:underline">{prospect.email}</a> : "Non renseigné"}</dd></div>
                   <div><dt className="text-slate-500">Site internet</dt><dd className="mt-1 break-all">{prospect.website ? <a href={prospect.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:underline">{new URL(prospect.website).hostname}<ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" /><span className="sr-only"> (nouvel onglet)</span></a> : "Non renseigné"}</dd></div>
-                  <div><dt className="text-slate-500">Ajouté le</dt><dd className="mt-1">{new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" }).format(new Date(prospect.createdAt))}</dd></div>
+                  <div><dt className="text-slate-500">Ajouté le</dt><dd className="mt-1">{prospect.createdAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" }).format(new Date(prospect.createdAt)) : "Date non renseignée"}</dd></div>
                 </dl>
               </section>
               <section className="rounded-2xl border border-slate-200 bg-white p-6">

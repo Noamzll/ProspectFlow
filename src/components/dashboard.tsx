@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { getDashboardStats } from "@/data/prospects";
 
 export function Dashboard() {
-  const { prospects, ready } = useProspects();
+  const { prospects, ready, busy, error } = useProspects();
   const [adding, setAdding] = useState(false);
   const stats = getDashboardStats(prospects);
   // Copier avant sort évite de modifier le tableau de données partagé.
@@ -39,11 +39,11 @@ export function Dashboard() {
         </div>
 
         <div className="mb-5 flex flex-wrap gap-3">
-          <button type="button" className="button-primary" disabled={!ready} onClick={() => setAdding(true)}><Plus className="size-4" aria-hidden="true" />Ajouter un prospect</button>
+          <button type="button" className="button-primary" disabled={!ready || busy} onClick={() => setAdding(true)}><Plus className="size-4" aria-hidden="true" />Ajouter un prospect</button>
           <Link href="/prospects" className="button-secondary">Voir tous les prospects</Link>
         </div>
         <StorageFeedback />
-        {!ready ? <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Chargement de votre dashboard…</p> : <>
+        {!ready ? <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">{error ? "Votre dashboard cloud n’a pas pu être chargé. Actualisez les données ci-dessus." : "Chargement de votre dashboard…"}</p> : <>
         <section aria-label="Indicateurs de prospection" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((card) => <StatCard key={card.label} {...card} />)}
         </section>
