@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, ArrowUpRight, ChevronLeft, ChevronRight, Pencil, RotateCcw, Search, Trash2, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ArrowUpRight, Pencil, RotateCcw, Search, Trash2, Users } from "lucide-react";
+import { ProspectsPagination } from "@/components/prospects-pagination";
 import { StatusBadge } from "@/components/status-badge";
 import { ProspectForm } from "@/components/prospect-form";
 import { DeleteProspectDialog } from "@/components/delete-prospect-dialog";
@@ -23,6 +24,7 @@ const columns: { key: SortKey; label: string }[] = [
 ];
 
 const statuses = prospectStatuses;
+const DEFAULT_PAGE_SIZE = 50;
 const controlClass = "h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";
 
 // « Énergie » et « energie » deviennent comparables pour la recherche.
@@ -38,14 +40,15 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
   const [sort, setSort] = useState<Sort | null>(null);
   const [clientFilter, setClientFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const paginationTop = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [deleting, setDeleting] = useState<Prospect | null>(null);
 
   const sectors = [...new Set(prospects.map((p) => p.sector))].sort((a, b) => a.localeCompare(b, "fr"));
   const cities = [...new Set(prospects.map((p) => p.city))].sort((a, b) => a.localeCompare(b, "fr"));
   const words = normalize(query).split(/\s+/).filter(Boolean);
-  const hasChanges = Boolean(query || status || sector || city || clientFilter || sort || page !== 1 || pageSize !== 10);
+  const hasChanges = Boolean(query || status || sector || city || clientFilter || sort || page !== 1 || pageSize !== DEFAULT_PAGE_SIZE);
 
   // filter produit un nouveau tableau : sort ne modifie pas les données reçues.
   const visibleProspects = prospects
@@ -73,6 +76,24 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
   const currentPage = Math.min(page, totalPages);
   const pageProspects = visibleProspects.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  function changePage(nextPage: number) {
+    setPage(nextPage);
+    paginationTop.current?.scrollIntoView({ block: "start" });
+  }
+
+  function changePageSize(size: number) {
+    setPageSize(size);
+    changePage(1);
+  }
+
+  const paginationProps = {
+    page: currentPage,
+    pageSize,
+    total: visibleProspects.length,
+    onPageChange: changePage,
+    onPageSizeChange: changePageSize,
+  };
+
   function toggleSort(key: SortKey) {
     setPage(1);
     setSort((current) => ({
@@ -89,7 +110,7 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
     setSort(null);
     setClientFilter("");
     setPage(1);
-    setPageSize(10);
+    setPageSize(DEFAULT_PAGE_SIZE);
   }
 
   return (
@@ -146,6 +167,10 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
           <RotateCcw className="size-4" aria-hidden="true" />Réinitialiser
         </button>
         </div>
+      </div>
+
+      <div ref={paginationTop} className="scroll-mt-4">
+        <ProspectsPagination {...paginationProps} label="Pagination des prospects en haut du tableau" />
       </div>
 
       {/* Le tableau défile dans son conteneur sans élargir toute la page. */}
@@ -230,19 +255,7 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-6 py-4 text-xs text-slate-500">
-        <div className="flex items-center gap-2">
-          <label htmlFor="prospect-page-size">Lignes par page</label>
-          <select id="prospect-page-size" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-            {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-3">
-          <span>Page {currentPage} sur {totalPages}</span>
-          <button type="button" aria-label="Page précédente" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40"><ChevronLeft className="size-4" aria-hidden="true" /></button>
-          <button type="button" aria-label="Page suivante" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40"><ChevronRight className="size-4" aria-hidden="true" /></button>
-        </div>
-      </div>
+      <ProspectsPagination {...paginationProps} label="Pagination des prospects en bas du tableau" />
       <p className="border-t border-slate-100 px-6 py-3 text-xs leading-5 text-slate-500">
         Sur petit écran, faites défiler le tableau horizontalement pour voir toutes les colonnes.
       </p>

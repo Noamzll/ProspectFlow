@@ -9,7 +9,7 @@ Mini SaaS pédagogique de prospection commerciale construit avec Next.js, TypeSc
 - Recherche sans distinction d’accents ou de majuscules, dans les sept colonnes et les notes.
 - Filtres combinables de statut, secteur, ville et relation prospect/client.
 - Tri croissant et décroissant sur chaque colonne ; les statuts suivent le parcours commercial.
-- Pagination de 10, 25 ou 50 lignes.
+- Pagination de 50 lignes par défaut (10 et 25 disponibles), navigation en haut et en bas du tableau, choix direct de page et compteur des lignes affichées.
 - Ajout et modification avec validation des champs.
 - Suppression après confirmation et possibilité d’annuler avant de confirmer.
 - Fiche individuelle, notes, échéance de prochaine action et suivi des clients obtenus.
@@ -62,6 +62,7 @@ src/
     dashboard.tsx              Indicateurs et derniers prospects
     prospects-workspace.tsx    Actions d’ajout et d’export
     prospects-table.tsx        Recherche, filtres, tri et pagination
+    prospects-pagination.tsx   Navigation partagée en haut et en bas du tableau
     prospect-detail.tsx        Coordonnées, notes et prochaine action
     prospect-form.tsx          Formulaire commun d’ajout et d’édition
     delete-prospect-dialog.tsx Confirmation de suppression
@@ -156,4 +157,6 @@ Les 18 tests couvrent notamment la compatibilité export/import, les notes multi
 
 ### Pagination
 
-Dans `src/components/prospects-table.tsx`, ajoute **5** aux choix de taille de page, actuellement `[10, 25, 50]`. Vérifie ensuite les deux pages avec les huit exemples et le comportement du bouton Suivant. Les valeurs de taille sont numériques et le nombre de pages dépend de `Math.ceil(nombreDeRésultats / pageSize)`.
+Le tableau affiche 50 prospects par page par défaut. Les commandes au-dessus et au-dessous du tableau permettent d’avancer, de reculer, d’aller à la première ou à la dernière page et de choisir directement un numéro de page. Le compteur indique la plage affichée parmi les résultats, par exemple **51–100 sur 1 201**. Une recherche, un filtre ou un tri revient à la première page ; changer de page conserve ces critères. Après une suppression, la page reste dans les limites des résultats disponibles.
+
+Dans `src/components/prospects-pagination.tsx`, ajoute **5** aux choix de taille de page, actuellement `[10, 25, 50]`. Vérifie ensuite les deux pages avec les huit exemples et le comportement du bouton Suivant. Les valeurs de taille sont numériques et le nombre de pages dépend de `Math.ceil(nombreDeRésultats / pageSize)`.
