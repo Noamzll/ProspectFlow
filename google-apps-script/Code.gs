@@ -48,7 +48,12 @@ function syncNow() {
     };
     // Valider tous les lots avant d'écrire le premier ; une erreur n'est jamais ignorée.
     const preview = run(true);
-    const result = config.dryRun ? preview : run(false);
+    let result = preview;
+    if (!config.dryRun) {
+      // Un Sheet inchangé n'a besoin d'aucun appel d'écriture après la simulation complète.
+      result = preview.created === 0 && preview.updated === 0
+        ? { ...preview, dryRun: false } : run(false);
+    }
     // Seulement des compteurs : ni email, ni ligne, ni ID, ni secret dans les logs.
     console.log('ProspectFlow : ' + JSON.stringify(result));
     return result;
@@ -58,7 +63,7 @@ function syncNow() {
 function installSyncTrigger() {
   // Fonction à lancer une seule fois après les tests. Remplace nos déclencheurs existants.
   removeSyncTriggers();
-  ScriptApp.newTrigger('syncNow').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('syncNow').timeBased().everyMinutes(15).create();
 }
 
 function removeSyncTriggers() {

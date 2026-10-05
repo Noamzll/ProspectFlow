@@ -29,7 +29,7 @@ function harness(lines, { dryRun = "false", result } = {}) {
       const response = result?.(payload, requests.length) ?? { status: 200, body: { created: payload.rows.length, updated: 0, unchanged: 0, dryRun: payload.dryRun } };
       return { getResponseCode: () => response.status, getContentText: () => JSON.stringify(response.body) };
     } },
-    ScriptApp: { getProjectTriggers: () => [...triggers], deleteTrigger: (trigger) => triggers.splice(triggers.indexOf(trigger), 1), newTrigger: (handler) => ({ timeBased: () => ({ everyMinutes: (minutes) => ({ create: () => { assert.equal(minutes, 5); triggers.push({ getHandlerFunction: () => handler }); } }) }) }) },
+    ScriptApp: { getProjectTriggers: () => [...triggers], deleteTrigger: (trigger) => triggers.splice(triggers.indexOf(trigger), 1), newTrigger: (handler) => ({ timeBased: () => ({ everyMinutes: (minutes) => ({ create: () => { assert.equal(minutes, 15); triggers.push({ getHandlerFunction: () => handler }); } }) }) }) },
   });
   vm.runInContext(code, context);
   return { run: () => vm.runInContext("syncNow()", context), context, values, requests, logs, sleeps, triggers, writes: () => columnWrites, locks: () => locks };
@@ -45,6 +45,45 @@ test("Apps Script synchronise 1 201 lignes par lots de 200, avec un seul enregis
   assert.equal(new Set(api.values.slice(1).map((row) => row[7])).size, 1201);
   assert.equal(api.locks(), 0);
   assert.ok(api.logs.every((log) => !log.includes("@example.com") && !log.includes("test-only-shared-secret")));
+});
+
+test("un Sheet de 1 201 lignes inchangées est entièrement simulé sans aucun appel d'écriture", () => {
+  const api = harness(Array.from({ length: 1201 }, (_, index) => line(index, crypto.randomUUID())), {
+    result: (payload) => ({ status: 200, body: { created: 0, updated: 0, unchanged: payload.rows.length, dryRun: payload.dryRun } }),
+  });
+  assert.deepEqual({ ...api.run() }, { created: 0, updated: 0, unchanged: 1201, dryRun: false });
+  assert.equal(api.requests.length, 7);
+  assert.deepEqual(api.requests.map((request) => request.rows.length), [200, 200, 200, 200, 200, 200, 1]);
+  assert.ok(api.requests.every((request) => request.dryRun));
+  assert.equal(api.writes(), 0);
+  assert.equal(api.locks(), 0);
+});
+
+test("le dry-run manuel d'un Sheet inchangé conserve dryRun: true sans passe d'écriture", () => {
+  const api = harness([line(1, crypto.randomUUID())], {
+    dryRun: "true",
+    result: (payload) => ({ status: 200, body: { created: 0, updated: 0, unchanged: 1, dryRun: payload.dryRun } }),
+  });
+  assert.deepEqual({ ...api.run() }, { created: 0, updated: 0, unchanged: 1, dryRun: true });
+  assert.equal(api.requests.length, 1);
+  assert.equal(api.requests[0].dryRun, true);
+  assert.equal(api.writes(), 0);
+  assert.equal(api.locks(), 0);
+});
+
+test("une modification dans le dernier lot conserve la simulation complète puis toute la passe d'écriture", () => {
+  const api = harness(Array.from({ length: 201 }, (_, index) => line(index, crypto.randomUUID())), {
+    result: (payload) => {
+      const updated = payload.rows.filter((row) => row.entreprise === "Société 200").length;
+      return { status: 200, body: { created: 0, updated, unchanged: payload.rows.length - updated, dryRun: payload.dryRun } };
+    },
+  });
+  assert.deepEqual({ ...api.run() }, { created: 0, updated: 1, unchanged: 200, dryRun: false });
+  assert.deepEqual(api.requests.map((request) => request.dryRun), [true, true, false, false]);
+  assert.deepEqual(api.requests.map((request) => request.rows.length), [200, 1, 200, 1]);
+  assert.deepEqual(api.requests.slice(2).map((request) => request.rows), api.requests.slice(0, 2).map((request) => request.rows));
+  assert.equal(api.writes(), 0);
+  assert.equal(api.locks(), 0);
 });
 
 test("les IDs restent attachés à l'entreprise après déplacement et les lectures périodiques détectent les éditions API", () => {
@@ -98,7 +137,7 @@ test("les pannes temporaires sont réessayées sans changer les IDs et sans jour
   assert.ok(api.logs.every((log) => !log.includes("ne pas journaliser")));
 });
 
-test("l'installation du déclencheur est idempotente et préserve les autres déclencheurs", () => {
+test("l'installation du déclencheur toutes les quinze minutes est idempotente et préserve les autres déclencheurs", () => {
   const api = harness([]);
   api.triggers.push({ getHandlerFunction: () => "autreFonction" });
   vm.runInContext("installSyncTrigger(); installSyncTrigger()", api.context);

@@ -4,9 +4,11 @@ Cette intégration est **désactivée par défaut**. Elle ne renvoie aucune modi
 
 ## Fonctionnement
 
-`syncNow()` lit les sept colonnes et `Prospect ID`, puis envoie des lots de **200 lignes maximum** à `POST /api/sync/google-sheet`. Une relecture toutes les cinq minutes détecte les modifications manuelles, les formules recalculées et les changements faits par API ; elle ne dépend pas de `onEdit`.
+`syncNow()` lit les sept colonnes et `Prospect ID`, puis envoie des lots de **200 lignes maximum** à `POST /api/sync/google-sheet`. Une relecture toutes les quinze minutes détecte les modifications manuelles, les formules recalculées et les changements faits par API ; elle ne dépend pas de `onEdit`.
 
 Chaque lot est validé et enregistré dans **une transaction PostgreSQL**, grâce à la RPC `sync_google_sheet_prospects`, accessible exclusivement au rôle serveur. Les 1 200 lignes ne forment pas une transaction globale : un incident après plusieurs lots peut laisser les premiers enregistrés. Relancer `syncNow()` reprend sans doublonner, car les IDs sont conservés. Tous les lots sont d'abord simulés avant d'écrire le premier.
+
+Si le total de la simulation complète donne `created: 0` et `updated: 0`, aucun lot d'écriture n'est envoyé. Avec `DRY_RUN=false`, les compteurs simulés sont retournés avec `dryRun: false` ; une simulation manuelle garde `dryRun: true`. Dès qu'une création ou modification est détectée, la passe d'écriture complète reste inchangée.
 
 La route utilise uniquement le compte et la source configurés sur Netlify ; le JSON ne peut pas choisir un autre propriétaire. Pas de cookies d'authentification utilisateur, de CORS permissif, de clé Supabase dans Apps Script ou de suppression exposée.
 
@@ -103,7 +105,7 @@ Pour une entreprise réellement nouvelle, laisser `Prospect ID` vide : le script
 2. Vérifier le compte, le fichier, l'onglet et tous les rattachements d'IDs. Garder `DRY_RUN=true` dans le script de production et lancer `syncNow()`.
 3. Vérifier les compteurs. Toute erreur arrête l'opération ; aucun lot d'écriture n'est envoyé tant qu'un lot de simulation échoue.
 4. Passer `GOOGLE_SHEET_SYNC_ENABLED=true` en production, redéployer, puis passer `DRY_RUN=false` dans le script. Lancer `syncNow()` manuellement et vérifier le résultat dans ProspectFlow via actualisation.
-5. Lancer `installSyncTrigger()` une fois : un déclencheur temporel exécute `syncNow()` **toutes les cinq minutes**. Ce délai est approximatif, dépend des quotas Google et n'est pas du temps réel.
+5. Lancer `installSyncTrigger()` une fois : un déclencheur temporel exécute `syncNow()` **toutes les quinze minutes**. Ce délai est approximatif, dépend des quotas Google et n'est pas du temps réel.
 
 Ne créer le déclencheur qu'après un envoi manuel réussi. Il s'exécute avec le compte Google qui l'a installé ; ce compte doit garder son accès au Sheet. Consulter Apps Script → Exécutions en cas d'échec. Pour arrêter : lancer `removeSyncTriggers()` et remettre `GOOGLE_SHEET_SYNC_ENABLED=false`. Pour tourner le secret, remplacer sa valeur dans Netlify et dans les propriétés du script, puis redéployer ; aucun changement de code requis.
 

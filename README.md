@@ -19,7 +19,7 @@ Les URL `/`, `/prospects` et `/prospects/[id]` restent identiques. Les exemples 
 
 ## Synchronisation Google Sheets (activation facultative)
 
-Une route serveur sécurisée permet la synchronisation Google Sheet → Supabase, par lots, avec IDs stables et simulation préalable. Elle est désactivée par défaut et ne modifie pas les notes, échéances, clients ni les policies RLS. Le script périodique retrouve aussi les modifications effectuées par API.
+Une route serveur sécurisée permet la synchronisation Google Sheet → Supabase, par lots, avec IDs stables et simulation préalable. Elle est désactivée par défaut et ne modifie pas les notes, échéances, clients ni les policies RLS. Le script relit le Sheet toutes les quinze minutes et retrouve aussi les modifications effectuées par API. Si la simulation complète ne détecte aucune création ni modification, aucun appel d'écriture n'est envoyé.
 
 Le [guide complet](google-apps-script/README.md) contient le SQL à exécuter, les variables Netlify, le code Apps Script à installer, le rattachement des prospects existants et un parcours de test isolé. Ne pas activer les écritures avant d'avoir vérifié le compte destinataire et les IDs des prospects déjà présents.
 
@@ -172,7 +172,7 @@ L’export relit Supabase au clic et inclut les dix champs métier. Il échappe 
 
 ## Vérifications
 
-51 tests : les 28 tests existants (CSV, modèle et service cloud) restent inchangés. Les 23 nouveaux tests couvrent la synchronisation sécurisée, les permissions et transactions PostgreSQL avec PGlite en mémoire, la conservation des champs propres au SaaS, la simulation et le script Apps Script par lots sur 1 201 lignes. Aucun test n'utilise votre base Supabase ou votre Google Sheet.
+54 tests : les 28 tests existants (CSV, modèle et service cloud) restent inchangés. Les 26 nouveaux tests couvrent la synchronisation sécurisée, les permissions et transactions PostgreSQL avec PGlite en mémoire, la conservation des champs propres au SaaS, la simulation et le script Apps Script par lots sur 1 201 lignes, dont l'absence de passe d'écriture quand le Sheet est inchangé. Aucun test n'utilise votre base Supabase ou votre Google Sheet.
 
 Le vrai SDK Supabase est utilisé avec un faux transport HTTP dans ces tests. Aucune table ni aucun compte de production n’est modifié. Le lint, le contrôle TypeScript et le build de production doivent être exécutés après chaque modification. Les vérifications du projet Supabase réel, de l’envoi des emails, du RLS réel et du déploiement Netlify restent à effectuer une fois les paramètres et le schéma configurés.
 
