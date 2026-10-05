@@ -1,0 +1,4 @@
+Entreprise;Secteur;Ville;Email;Site internet;Statut;Prochaine action;Échéance;Client;Notes
+Atelier Sillage;Architecture;Lyon;contact@sillage.example;https://sillage.example;Nouveau;Identifier le responsable;;Non;Exemple fictif à personnaliser
+Orion Conseil;Conseil;Paris;bonjour@orion.example;https://orion.example;Brouillon prêt;Relire le premier email;;Non;Exemple fictif à personnaliser
+Studio Delta;Design;Bordeaux;hello@delta.example;https://delta.example;Réponse reçue;Préparer le démarrage;;Oui;Exemple fictif à personnaliser

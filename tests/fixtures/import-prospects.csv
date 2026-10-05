@@ -1,0 +1,5 @@
+Entreprise;Secteur;Ville;Email;Site internet;Statut;Prochaine action;Échéance;Client;Notes
+Test import CSV temporaire;Logiciel;Paris;test-import@prospectflow.example;https://prospectflow.example;Brouillon prêt;Vérifier le parcours CSV;12/10/2026;Non;"Note temporaire pour le test
+sur deux lignes"
+Atelier Forma;Architecture;Lyon;bonjour@forma.example;https://forma.example;Nouveau;Identifier le responsable;;Non;Doublon de démonstration
+Ligne invalide temporaire;Conseil;;incorrect;https://exemple.example;Nouveau;;;Non;Cette ligne ne doit pas être importée

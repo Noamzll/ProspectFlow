@@ -1,0 +1,8 @@
+node_modules/
+ProspectFlow-code/
+.pnpm-store/
+.next/
+out/
+*.tsbuildinfo
+.env*
+!.env.example
