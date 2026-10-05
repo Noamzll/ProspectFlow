@@ -17,11 +17,11 @@ const fields = [
 ] as const;
 
 export function ProspectForm({ prospect, onClose, onSaved }: { prospect?: Prospect; onClose: () => void; onSaved?: () => void }) {
-  const { addProspect, updateProspect, error } = useProspects();
+  const { addProspect, updateProspect, error, busy } = useProspects();
   const [errors, setErrors] = useState<FormErrors>({});
   const prefix = useId();
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -40,7 +40,7 @@ export function ProspectForm({ prospect, onClose, onSaved }: { prospect?: Prospe
       if (field instanceof HTMLElement) field.focus();
       return;
     }
-    const saved = prospect ? updateProspect(prospect.id, input) : addProspect(input);
+    const saved = await (prospect ? updateProspect(prospect.id, input) : addProspect(input));
     if (saved) { onClose(); onSaved?.(); }
   }
 
@@ -48,7 +48,7 @@ export function ProspectForm({ prospect, onClose, onSaved }: { prospect?: Prospe
     <Modal title={prospect ? "Modifier le prospect" : "Ajouter un prospect"} onClose={onClose}>
       <form onSubmit={submit} noValidate className="p-6">
         <p className="mb-5 text-xs text-slate-500">Les champs marqués d’un * sont obligatoires.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <fieldset disabled={busy} className="grid gap-4 disabled:opacity-60 sm:grid-cols-2">
           {fields.map((field) => {
             const id = `${prefix}-${field.name}`;
             return (
@@ -73,11 +73,11 @@ export function ProspectForm({ prospect, onClose, onSaved }: { prospect?: Prospe
             <input type="checkbox" name="isClient" defaultChecked={prospect?.isClient ?? false} className="size-4 accent-indigo-600" />
             <span>Ce prospect est devenu client</span>
           </label>
-        </div>
+        </fieldset>
         {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
         <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
           <button type="button" onClick={onClose} className="button-secondary">Annuler</button>
-          <button type="submit" className="button-primary">{prospect ? "Enregistrer les modifications" : "Créer le prospect"}</button>
+          <button type="submit" disabled={busy} className="button-primary">{busy ? "Sauvegarde en cours…" : prospect ? "Enregistrer les modifications" : "Créer le prospect"}</button>
         </div>
       </form>
     </Modal>

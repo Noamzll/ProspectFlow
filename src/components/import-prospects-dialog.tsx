@@ -8,7 +8,7 @@ import { MAX_CSV_BYTES, parseProspectsCsv, selectNewImportRows, type CsvImport }
 import { StatusBadge } from "@/components/status-badge";
 
 export function ImportProspectsDialog({ onClose }: { onClose: () => void }) {
-  const { prospects, importProspects, error } = useProspects();
+  const { prospects, importProspects, error, busy } = useProspects();
   const [result, setResult] = useState<CsvImport | null>(null);
   const [fileName, setFileName] = useState("");
   const [fileError, setFileError] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function ImportProspectsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title="Importer des prospects depuis un CSV" onClose={onClose}>
-      <div className="p-6">
+      <fieldset disabled={busy} className="min-w-0 p-6">
         <p className="text-sm leading-6 text-slate-600">Sélectionnez un CSV UTF-8 séparé par des virgules ou des points-virgules. Les colonnes Entreprise, Secteur et Ville sont obligatoires. Les autres sont facultatives.</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">L’import ajoute des prospects. Un email identique ou une même entreprise dans une même ville est considéré comme un doublon et ignoré.</p>
         <a href="/exemple-prospects.csv" download className="mt-3 inline-block rounded text-sm font-medium text-indigo-600 underline underline-offset-4">Télécharger un exemple CSV</a>
@@ -105,11 +105,11 @@ export function ImportProspectsDialog({ onClose }: { onClose: () => void }) {
         {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
         <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
           <button type="button" onClick={onClose} className="button-secondary">Annuler</button>
-          <button type="button" disabled={reading || !selection?.accepted.length} onClick={() => { if (result && importProspects(result.rows)) onClose(); }} className="button-primary">
-            <Upload className="size-4" aria-hidden="true" />Importer {selection?.accepted.length ?? 0} {selection?.accepted.length === 1 ? "prospect valide" : "prospects valides"}
+          <button type="button" disabled={busy || reading || !selection?.accepted.length} onClick={async () => { if (result && await importProspects(result.rows)) onClose(); }} className="button-primary">
+            <Upload className="size-4" aria-hidden="true" />{busy ? "Import en cours…" : `Importer ${selection?.accepted.length ?? 0} ${selection?.accepted.length === 1 ? "prospect valide" : "prospects valides"}`}
           </button>
         </div>
-      </div>
+      </fieldset>
     </Modal>
   );
 }

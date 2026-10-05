@@ -1,35 +1,41 @@
 # ProspectFlow
 
-Mini SaaS pédagogique de prospection commerciale construit avec Next.js, TypeScript et Tailwind CSS. Cette version complète fonctionne localement dans le navigateur.
+Mini SaaS de prospection commerciale avec Next.js App Router, TypeScript, Tailwind CSS et Supabase Auth/PostgreSQL. Les prospects sont désormais sauvegardés dans le compte cloud de l’utilisateur connecté.
 
-## Fonctionnalités
+## Fonctionnalités conservées
 
-- Dashboard avec six indicateurs calculés et les cinq derniers prospects.
-- Tableau : entreprise, secteur, ville, email, site, statut et prochaine action, avec boutons de modification et de suppression.
-- Recherche sans distinction d’accents ou de majuscules, dans les sept colonnes et les notes.
-- Filtres combinables de statut, secteur, ville et relation prospect/client.
-- Tri croissant et décroissant sur chaque colonne ; les statuts suivent le parcours commercial.
-- Pagination de 50 lignes par défaut (10 et 25 disponibles), navigation en haut et en bas du tableau, choix direct de page et compteur des lignes affichées.
-- Ajout et modification avec validation des champs.
-- Suppression après confirmation et possibilité d’annuler avant de confirmer.
-- Fiche individuelle, notes, échéance de prochaine action et suivi des clients obtenus.
-- Sauvegarde locale, mise à jour du dashboard et synchronisation entre onglets.
-- Export de tous les prospects en CSV compatible avec les tableurs.
-- Import CSV avec sélection de fichier ou collage, aperçu, validation des lignes et détection des doublons.
-- Interface responsive, navigation clavier, fenêtres modales natives, pages d’erreur et cas sans résultat.
+- Dashboard : total, à contacter, brouillons, contactés, réponses, clients et derniers ajouts.
+- Tableau avec recherche, filtres combinables, tri et pagination de 50 lignes par défaut.
+- Navigation en haut et en bas, choix de page, première/dernière page et compteur de lignes.
+- Création, modification, suppression confirmée, fiches, notes, échéances et suivi des clients.
+- Import CSV avec sélection ou collage, validation, aperçu et détection des doublons.
+- Export CSV des données relues dans Supabase au moment de l’export.
+- Inscription email/mot de passe, connexion, confirmation email et déconnexion.
+- Session persistante par cookies, rafraîchissement des jetons et protection des routes commerciales.
+- Proposition de migration des prospects locaux, uniquement après confirmation de l’utilisateur.
+- Synchronisation entre onglets du même navigateur, et relecture du cloud au retour dans l’onglet.
 
-## Démarrer
+Les URL `/`, `/prospects` et `/prospects/[id]` restent identiques. Les exemples locaux ne sont plus affichés comme des données cloud et ne sont jamais injectés automatiquement.
 
-Utiliser Node.js 22.18 ou une version plus récente (Node.js 24 recommandé), avec pnpm installé.
+## Installation locale
+
+Utiliser Node.js 22.18 ou plus récent et pnpm.
 
 ```sh
 pnpm install
-pnpm dev
 ```
 
-Ouvrir http://localhost:3000. Arrêter le serveur avec Ctrl+C.
+Copier `.env.example` vers `.env.local` et renseigner uniquement les valeurs publiques du projet Supabase :
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+```
+
+Aucune valeur réelle n’est présente dans le dépôt. `.env.local` est ignoré par Git. Ne pas utiliser de clé `service_role` ou `sb_secret_` dans une variable `NEXT_PUBLIC_`.
 
 ```sh
+pnpm dev
 pnpm test
 pnpm lint
 pnpm typecheck
@@ -37,126 +43,133 @@ pnpm build
 pnpm start
 ```
 
-Dans un environnement où pnpm n’est pas accessible mais où les dépendances sont déjà installées :
+Ouvrir http://localhost:3000. Les variables configurées sur Netlify ne sont pas automatiquement présentes dans le terminal local. En leur absence, le build reste possible et la page de connexion explique la configuration manquante ; aucune ancienne donnée locale n’est affichée dans l’espace commercial.
 
-```sh
-node node_modules/next/dist/bin/next dev
-node --experimental-strip-types --test tests/prospect-core.test.mjs
+## Étapes manuelles dans Supabase
+
+### 1. Conserver les fonctionnalités déjà présentes
+
+La table fournie possède les sept champs métier mais ne possède pas de colonnes pour les **notes**, **échéances** et **clients obtenus**. Ces trois informations existent déjà dans ProspectFlow : les omettre ferait perdre des fonctions et des données lors du transfert.
+
+Dans le SQL Editor de Supabase, exécuter le fichier :
+
+`supabase/migrations/20261005_preserve_prospect_details.sql`
+
+Il ajoute uniquement `notes text`, `prochaine_action_date date` et `is_client boolean not null default false`. Il ne recrée aucune table, ne change pas les sept champs métier, ne désactive pas le RLS et ne modifie aucune policy. Le script est transactionnel et peut être exécuté à nouveau grâce à `IF NOT EXISTS`. Il recharge le cache du schéma de la Data API.
+
+Ce script n’est pas exécuté automatiquement par l’application. Tant que ces colonnes manquent, un message explicite invite à l’appliquer ; les écritures ne perdent pas silencieusement les détails.
+
+### 2. Vérifier Auth et les policies existantes
+
+- Dans Authentication, activer le fournisseur Email avec inscription par mot de passe.
+- Conserver la confirmation email si elle est souhaitée ; configurer l’envoi des emails dans Supabase pour la production.
+- Dans Authentication > URL Configuration, définir **Site URL** sur l’URL HTTPS de l’application Netlify.
+- Ajouter dans **Redirect URLs** l’URL exacte `https://votre-domaine/auth/callback` et, pour le développement, `http://localhost:3000/auth/callback`.
+- Pour utiliser l’URL locale alternative ou un autre port, ajouter aussi son URL de callback exacte.
+- Vérifier que les policies existantes autorisent SELECT et DELETE avec `auth.uid() = user_id`, INSERT avec ce même `WITH CHECK`, et UPDATE avec cette condition dans `USING` et `WITH CHECK`.
+
+Aucune policy n’est créée ou remplacée par cette modification. Les clients utilisent la clé publiable et la session de l’utilisateur ; le RLS reste l’autorité pour l’accès aux lignes.
+
+### 3. Confirmation d’email
+
+Le callback `/auth/callback` échange le code PKCE pour une session. Il fonctionne avec le modèle d’email standard et le callback envoyé lors de l’inscription. Ce flux doit être terminé dans le navigateur ayant démarré l’inscription, car il détient le vérificateur PKCE.
+
+Pour permettre une confirmation ouverte dans un autre navigateur, le endpoint `/auth/confirm` est également fourni. Dans Authentication > Email Templates > Confirm signup, utiliser ce lien :
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Confirmer mon email</a>
 ```
 
-## Architecture
+Ce modèle utilise la Site URL configurée, donc pointe sur l’application de production. Les liens invalides ou expirés reviennent vers la connexion avec un message. Aucune redirection fournie par un paramètre n’est utilisée : la destination après connexion est toujours l’application.
 
-Les routes restent de petits composants Next.js ; les interactions vivent dans les composants React. Un état partagé fournit la même liste au tableau, aux fiches et au dashboard.
+Ces flux suivent la [configuration SSR Supabase](https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs) et le [guide de confirmation email](https://supabase.com/docs/guides/getting-started/tutorials/with-nextjs).
 
-```text
-src/
-  app/
-    layout.tsx                 Structure commune et provider
-    page.tsx                   Route du dashboard
-    prospects/page.tsx         Route du tableau
-    prospects/[id]/page.tsx    Route d’une fiche
-    not-found.tsx              Page 404
-    error.tsx                  Erreur de rendu
-    globals.css                Tailwind et styles communs
-  components/
-    dashboard.tsx              Indicateurs et derniers prospects
-    prospects-workspace.tsx    Actions d’ajout et d’export
-    prospects-table.tsx        Recherche, filtres, tri et pagination
-    prospects-pagination.tsx   Navigation partagée en haut et en bas du tableau
-    prospect-detail.tsx        Coordonnées, notes et prochaine action
-    prospect-form.tsx          Formulaire commun d’ajout et d’édition
-    delete-prospect-dialog.tsx Confirmation de suppression
-    import-prospects-dialog.tsx Fenêtre d’import et aperçu CSV
-    modal.tsx                  Fenêtre native et focus clavier
-    prospects-provider.tsx    Contexte React partagé
-    sidebar.tsx                Navigation
-    page-header.tsx            En-tête commun
-    stat-card.tsx              Carte d’indicateur
-    status-badge.tsx           Badge de statut
-  lib/
-    prospect-store.ts          Lecture, écriture et notifications
-    prospect-validation.ts    Validation des formulaires et sauvegardes
-    export-prospects.ts        Génération et téléchargement du CSV
-    import-prospects.ts        Lecture CSV, validation et doublons
-  data/prospects.ts            Huit exemples et calcul des indicateurs
-  types/prospect.ts            Modèle TypeScript
-tests/prospect-core.test.mjs   Tests de logique et de sauvegarde
-tests/csv-import.test.mjs      Tests de l’import CSV
-public/exemple-prospects.csv   Exemple à personnaliser
-```
+## Étapes manuelles dans Netlify
 
-### Comment les changements circulent
+1. Vérifier les deux variables existantes, avec exactement les noms ci-dessus, pour le contexte Production. Elles doivent être disponibles au **build** et aux **Functions**. Si un aperçu de déploiement doit être testé, configurer aussi son contexte avec les mêmes valeurs publiques.
+2. Conserver le runtime/adaptateur Next.js de Netlify : l’application utilise désormais du SSR et un proxy, et doit être déployée avec `pnpm build`, sans export statique.
+3. Après exécution du script SQL et configuration Auth, déployer la nouvelle version. Toute modification de variable `NEXT_PUBLIC_` nécessite un nouveau build.
+4. Tester inscription, confirmation email, connexion, CRUD, import de plus de 1 000 lignes, export, rechargement, connexion sur un autre appareil et déconnexion.
+5. Avec deux comptes de test, vérifier que chaque compte voit uniquement ses propres prospects et ne peut pas modifier ni supprimer ceux de l’autre.
 
-1. Le formulaire lit ses champs avec `FormData` et les valide.
-2. Le store relit la sauvegarde courante et calcule la nouvelle liste sans modifier l’ancienne.
-3. Il écrit dans `localStorage`. Il confirme l’opération uniquement si l’écriture réussit.
-4. `useSyncExternalStore` informe React du changement. Le provider partage la nouvelle liste à toutes les pages.
-5. Le dashboard recalcule ses valeurs ; le tableau recalcule ses filtres et sa pagination.
+Voir la documentation officielle [Next.js sur Netlify](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/) et [variables d’environnement](https://docs.netlify.com/build/configure-builds/environment-variables/).
 
-Les composants utilisant `useState`, des événements ou le contexte partagé portent `"use client"`. `filter()` crée une nouvelle liste et `sort()` trie cette copie. Les options uniques sont obtenues avec `Set`. `aria-sort` décrit le tri aux lecteurs d’écran. Le dialogue natif bloque le focus dans la fenêtre ; Échap ferme celle-ci et le focus revient au bouton d’origine.
+## Architecture et fichiers modifiés
 
-## Données et sauvegarde
+### Authentification et routes
 
-Au premier démarrage, les huit exemples de `src/data/prospects.ts` sont affichés. Les domaines `.example` servent uniquement à la démonstration. L’ajout, l’édition ou la suppression enregistrent la liste dans la clé `prospectflow.prospects.v1` de `localStorage`.
+- `.env.example` : noms des deux variables, sans clé réelle.
+- `package.json`, `pnpm-lock.yaml` : bibliothèques officielles `@supabase/supabase-js` et `@supabase/ssr`.
+- `src/lib/supabase/config.ts` : lecture et validation de la configuration publique.
+- `src/lib/supabase/client.ts` : client navigateur utilisant les cookies SSR.
+- `src/lib/supabase/server.ts` : client créé pour chaque requête serveur, avec `await cookies()`.
+- `src/proxy.ts` : vérification du JWT, rafraîchissement des cookies et réponses non mises en cache.
+- `src/app/layout.tsx` : structure HTML commune, sans données d’utilisateur globales.
+- `src/app/(commercial)/layout.tsx` : vérification serveur de l’utilisateur, provider et sidebar protégés.
+- `src/app/(commercial)/page.tsx`, `src/app/(commercial)/prospects/page.tsx`, `src/app/(commercial)/prospects/[id]/page.tsx` : déplacements des trois pages existantes, sans changement des URL.
+- `src/app/connexion/page.tsx`, `src/components/auth-form.tsx` : inscription et connexion dans le design existant.
+- `src/app/auth/callback/route.ts`, `src/app/auth/confirm/route.ts` : confirmation et établissement de session.
 
-Une fois une liste enregistrée, modifier le fichier d’exemples ne remplace plus les données sauvegardées. Une liste vide sauvegardée reste vide après rechargement. Les valeurs lues sont validées ; une sauvegarde invalide reste intacte et un message explique l’échec. Les échecs de stockage ne sont pas présentés comme des enregistrements réussis.
+### Données et interface
 
-Les données appartiennent à ce navigateur et à cette origine (adresse et port). Elles restent après un rechargement ; elles ne sont pas partagées entre appareils. Effacer les données du site supprime cette sauvegarde. L’export CSV peut être réimporté pour ajouter les prospects absents ; il n’écrase pas les fiches existantes. Les filtres et le tri sont temporaires et reviennent à leur état initial après rechargement.
+- `src/types/database.ts` : types des lignes, insertions et mises à jour Supabase.
+- `src/lib/prospect-mapping.ts` : conversion entre les noms du modèle existant et les noms SQL.
+- `src/lib/prospects-service.ts` : toutes les lectures et mutations, validation, RLS, import et vérification du transfert.
+- `src/lib/local-migration.ts` : lecture de la véritable clé locale, empreinte de migration et IDs stables par utilisateur.
+- `src/components/prospects-provider.tsx` : état cloud partagé, chargement, erreurs, opérations asynchrones, migration et synchronisation.
+- `src/components/prospect-form.tsx`, `delete-prospect-dialog.tsx`, `import-prospects-dialog.tsx` : attente de la confirmation cloud avant de fermer les fenêtres ; actions désactivées pendant l’écriture.
+- `src/components/dashboard.tsx`, `prospects-workspace.tsx`, `prospect-detail.tsx` : lecture des données cloud et états de chargement/erreur.
+- `src/components/sidebar.tsx`, `page-header.tsx` : compte connecté, déconnexion et indication de sauvegarde cloud.
+- `supabase/migrations/20261005_preserve_prospect_details.sql` : les trois colonnes nécessaires pour conserver les fonctions existantes.
+- `tests/supabase-service.test.mjs` : tests du vrai SDK avec un transport HTTP simulé, sans compte distant.
+- `README.md` : procédure de configuration, architecture et vérifications.
 
-Les onglets de la même origine se synchronisent via l’événement `storage`. Le store relit les données avant chaque modification. En cas de modifications simultanées du même prospect, la dernière écriture gagne : cette version n’a pas de gestion de conflits multi-utilisateur.
+L’ancien `src/lib/prospect-store.ts` est supprimé : il écrivait les prospects dans localStorage. Les anciens helpers de validation/sauvegarde restent pour lire le format historique et conserver les tests existants ; ils ne sont plus utilisés pour les mutations de l’application.
 
-Cette version fonctionne sans connexion de compte, envoi d’email, serveur de données, facturation ni déploiement. Les statuts de contact décrivent le suivi saisi manuellement. Une vraie base de données et une authentification pourront remplacer la couche de stockage dans une étape ultérieure.
+### Mapping
 
-## Modèle et indicateurs
+| Modèle TypeScript | Colonne Supabase |
+| --- | --- |
+| `company` | `entreprise` |
+| `sector` | `secteur` |
+| `city` | `ville` |
+| `email` | `email` |
+| `website` | `site_internet` |
+| `status` | `statut` |
+| `nextAction` | `prochaine_action` |
+| `notes` | `notes` |
+| `nextActionDate` | `prochaine_action_date` |
+| `isClient` | `is_client` |
+| `createdAt` | `created_at` |
 
-Statuts : Nouveau, À vérifier, Brouillon prêt, Envoyé, Réponse reçue.
+Le modèle `Prospect` et les cinq statuts restent inchangés : Nouveau, À vérifier, Brouillon prêt, Envoyé, Réponse reçue. Une insertion utilise toujours l’id de l’utilisateur connecté. Une mise à jour ne modifie ni `user_id`, ni `created_at` ; elle renseigne `updated_at`. SELECT/UPDATE/DELETE s’appuient sur le RLS, sans filtre client servant de substitut aux policies.
 
-`isClient` suit la conversion en client sans ajouter un sixième statut. `notes` et `nextActionDate` sont facultatifs. Les dates d’action sont au format `YYYY-MM-DD` et affichées sans décalage de fuseau ; la date de création est un horodatage ISO affiché à l’heure de Paris.
+## Migration des données locales
 
-- Total : toutes les entrées, clients inclus.
-- À contacter : non-clients Nouveau, À vérifier ou Brouillon prêt.
-- Brouillons prêts : non-clients Brouillon prêt.
-- Contactés : Envoyé, Réponse reçue ou client obtenu.
-- Réponses : statut Réponse reçue.
-- Clients : `isClient` à `true`.
+Après connexion et chargement du cloud, si ce compte ne possède aucun prospect, le provider recherche `prospectflow.prospects.v1`. Il ne prend pas les exemples comme données de migration. Si la sauvegarde est valide et non vide, une proposition explicite apparaît. **Plus tard** permet de continuer sans transférer.
 
-Les compteurs se recoupent. Avec les exemples : **8 / 5 / 2 / 3 / 2 / 1**.
+Après confirmation, le service relit le cloud, élimine les doublons, écrit les nouvelles lignes et relit toutes les données pour vérifier les IDs, les champs et les dates transférés. Il conserve notes, échéances, indicateur de client et dates de création. Les IDs historiques, parfois non UUID, sont convertis en UUID stables propres à chaque utilisateur. Une coupure suivie d’une reprise ne réinsère pas le même lot.
+
+Un repère de succès, lié à l’utilisateur et à l’empreinte de la sauvegarde, est enregistré uniquement après vérification. L’original local reste intact, y compris si la sauvegarde contient des doublons ayant d’autres informations. Les fiches cloud existantes ne sont pas écrasées. Aucune suppression automatique de la copie locale n’est réalisée ; elle peut être retirée manuellement après vérification/export du cloud.
+
+En cas d’erreur, le transfert ne se présente pas comme réussi et aucune donnée locale n’est effacée. Les anciennes données ne sont jamais utilisées comme une réponse cloud temporaire. La migration doit être proposée depuis **le même navigateur et la même origine** que l’ancienne version : une sauvegarde de localhost n’est pas disponible sur le domaine Netlify, et inversement. Pour déplacer les données d’une autre origine, exporter le CSV depuis l’ancienne version et l’importer après connexion.
+
+## Import, export et pagination
+
+L’import accepte CSV UTF-8, virgules ou points-virgules, guillemets doublés et notes multilignes. Limites : 2 Mo et 5 000 lignes par fichier. Colonnes obligatoires actuelles : Entreprise, Secteur, Ville. Email, Site internet, Statut et Prochaine action sont facultatives ; les colonnes Échéance, Client et Notes restent prises en charge. Casse et accents des en-têtes sont normalisés, les noms anglais existants sont reconnus, les champs et les cinq statuts sont validés.
+
+La détection de doublons utilise l’email ou l’entreprise + ville, sans distinction de casse et d’accents. Une relecture complète du cloud précède l’écriture. Le lot est envoyé en une requête transactionnelle. Sans contrainte unique métier supplémentaire dans le schéma, deux imports simultanés depuis des appareils différents peuvent encore créer un doublon métier : la validation applicative ne remplace pas une contrainte SQL. Les reprises de la même migration sont protégées par leurs IDs stables.
+
+Supabase limite la taille de ses réponses. Le service lit des tranches de 500 lignes avec un comptage exact jusqu’à avoir récupéré tous les résultats, y compris si le serveur applique une limite inférieure. Cela protège le tableau, les compteurs, l’export et la détection de doublons au-delà de 1 000 prospects. Le tableau affiche ensuite uniquement 50 lignes à la fois, avec ses filtres et sa navigation habituels.
+
+L’export relit Supabase au clic et inclut les dix champs métier. Il échappe guillemets, séparateurs et retours à la ligne, et neutralise les valeurs pouvant être interprétées comme des formules par un tableur. Exemple CSV : `public/exemple-prospects.csv`.
 
 ## Vérifications
 
-Les tests vérifient les compteurs, les dates impossibles, les coordonnées facultatives, les protocoles de liens, les sauvegardes corrompues et dupliquées, les listes vides, les erreurs d’écriture et l’échappement du CSV. Le CSV inclut les dix champs métier et neutralise les valeurs qui pourraient être interprétées comme des formules par un tableur.
+28 tests : les 18 tests existants, plus 10 tests cloud couvrant une liste de 1 201 lignes, une limite serveur réduite, l’isolation du propriétaire, le mapping, CRUD, les refus RLS, les sessions changées/expirées, un import de 1 200 nouvelles lignes, la déduplication, les migrations répétées, la conservation des détails et les écritures non confirmées.
 
-Le parcours navigateur a été vérifié : création, erreurs de formulaire, édition, fiche individuelle, rechargement, compteurs synchronisés, annulation et confirmation de suppression, recherche dans les notes, filtre clients, pagination et synchronisation entre onglets. Les prospects temporaires de vérification ont été retirés.
-
-La génération du CSV est testée. Le navigateur intégré n’a pas fourni de confirmation de téléchargement lors du contrôle automatisé ; la réception du fichier reste à vérifier dans un navigateur classique.
+Le vrai SDK Supabase est utilisé avec un faux transport HTTP dans ces tests. Aucune table ni aucun compte de production n’est modifié. Le lint, le contrôle TypeScript et le build de production doivent être exécutés après chaque modification. Les vérifications du projet Supabase réel, de l’envoi des emails, du RLS réel et du déploiement Netlify restent à effectuer une fois les paramètres et le schéma configurés.
 
 ## Petit exercice
 
-### Importer un CSV
-
-1. Dans la page Prospects, cliquer sur **Importer CSV**.
-2. Choisir un fichier `.csv`, ou ouvrir **Ou coller le contenu CSV**, coller le texte et cliquer sur **Prévisualiser le CSV collé**.
-3. Lire l’aperçu et les détails des lignes invalides et des doublons.
-4. Cliquer sur **Importer N prospects valides** pour enregistrer les nouvelles fiches.
-
-Le traitement reste dans le navigateur : le fichier n’est pas envoyé à un service externe. Formats acceptés : CSV UTF-8, virgules ou points-virgules, guillemets doublés, notes sur plusieurs lignes. Taille maximale : 2 Mo, 5 000 lignes de prospects. Les lignes entièrement vides sont ignorées.
-
-Colonnes obligatoires : **Entreprise**, **Secteur**, **Ville**. Colonnes facultatives : **Email**, **Site internet**, **Statut**, **Prochaine action**, **Échéance**, **Client**, **Notes**. Leur ordre est libre. Les noms anglais du modèle sont aussi reconnus. Les colonnes inconnues sont signalées puis ignorées ; deux en-têtes correspondant au même champ sont refusés.
-
-Le statut absent devient Nouveau. La casse et les accents des statuts sont ignorés. Une adresse de site sans protocole reçoit `https://`. L’échéance accepte `YYYY-MM-DD` ou `JJ/MM/AAAA`. Le champ Client accepte Oui/Non, true/false, yes/no ou 1/0 ; vide signifie Non.
-
-Les doublons sont reconnus par le même email, ou la même entreprise et la même ville, sans distinction de casse ou d’accents. Cela s’applique aux prospects déjà sauvegardés et aux répétitions dans le fichier. Les fiches existantes ne sont pas modifiées. Le store relit la sauvegarde au moment de valider et vérifie à nouveau les doublons, pour tenir compte d’un autre onglet. Tout le lot est écrit en une seule opération ; un échec de stockage conserve les anciennes données.
-
-Une erreur de structure CSV bloque l’aperçu. Une erreur dans une ligne (ville absente, email invalide, etc.) exclut cette ligne et affiche son numéro. Les lignes valides restent importables après confirmation explicite. Une réimportation du même fichier n’ajoute pas de doublons. Les apostrophes de protection des formules dans un export restent du texte lors de l’import.
-
-Exemple : `public/exemple-prospects.csv`, également accessible via le lien de téléchargement dans la fenêtre. Il contient trois entreprises fictives à personnaliser.
-
-Les 18 tests couvrent notamment la compatibilité export/import, les notes multilignes, les guillemets, les formats de date, les erreurs, les limites et les doublons. Le parcours par collage a été vérifié dans le navigateur avec rechargement, conservation des notes et de l’échéance et réimportation. Le sélecteur de fichier du navigateur intégré n’a pas pu être piloté par le test automatisé ; la sélection manuelle d’un fichier reste à vérifier.
-
-**Exercice CSV :** change le nom et la ville d’une entreprise dans `public/exemple-prospects.csv`, puis importe le fichier. Réimporte-le et observe les doublons détectés.
-
-### Pagination
-
-Le tableau affiche 50 prospects par page par défaut. Les commandes au-dessus et au-dessous du tableau permettent d’avancer, de reculer, d’aller à la première ou à la dernière page et de choisir directement un numéro de page. Le compteur indique la plage affichée parmi les résultats, par exemple **51–100 sur 1 201**. Une recherche, un filtre ou un tri revient à la première page ; changer de page conserve ces critères. Après une suppression, la page reste dans les limites des résultats disponibles.
-
-Dans `src/components/prospects-pagination.tsx`, ajoute **5** aux choix de taille de page, actuellement `[10, 25, 50]`. Vérifie ensuite les deux pages avec les huit exemples et le comportement du bouton Suivant. Les valeurs de taille sont numériques et le nombre de pages dépend de `Math.ceil(nombreDeRésultats / pageSize)`.
+Dans `src/lib/prospect-mapping.ts`, repérer comment `company` devient `entreprise`. Modifier le libellé du bouton **Transférer vers mon cloud** dans `src/components/prospects-provider.tsx`, puis vérifier que le transfert reste déclenché uniquement par un clic explicite.
