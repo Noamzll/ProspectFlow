@@ -8,7 +8,7 @@ export function fromProspectRow(row: ProspectRow): Prospect {
   return {
     id: row.id, company: row.entreprise, sector: row.secteur ?? "", city: row.ville,
     email: row.email ?? "", website: row.site_internet ?? "", status: row.statut,
-    nextAction: row.prochaine_action ?? "", createdAt: row.created_at ?? "",
+    nextAction: row.prochaine_action ?? "", createdAt: row.created_at ?? "", updatedAt: row.updated_at ?? row.created_at ?? "",
     notes: row.notes ?? "", nextActionDate: row.prochaine_action_date ?? "", isClient: row.is_client ?? false,
   };
 }
