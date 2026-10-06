@@ -15,9 +15,10 @@ export type Prospect = {
   status: ProspectStatus;
   nextAction: string;
   createdAt: string;
+  updatedAt: string;
   isClient: boolean;
   nextActionDate?: string;
   notes?: string;
 };
 
-export type ProspectInput = Omit<Prospect, "id" | "createdAt">;
+export type ProspectInput = Omit<Prospect, "id" | "createdAt" | "updatedAt">;
