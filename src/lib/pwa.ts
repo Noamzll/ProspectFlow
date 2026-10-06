@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 
-// Activer après avoir ajouté les trois vrais PNG décrits dans public/icons/README.md.
-// Aucun lien vers une image manquante ni icône provisoire n'est publié jusque-là.
-export const PWA_ICONS_READY = false;
+// Les trois icônes PNG de ProspectFlow sont présentes dans public/icons/.
+export const PWA_ICONS_READY = true;
 
 export const pwaIcons: MetadataRoute.Manifest["icons"] = [
   { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
