@@ -36,6 +36,7 @@ type ProspectsContextValue = CloudState & {
 
 const ProspectsContext = createContext<ProspectsContextValue | null>(null);
 const emptyState: CloudState = { prospects: [], ready: false, busy: false, error: null, notice: null, migration: null, migrationWarning: null };
+const AUTO_REFRESH_MS = 60_000;
 
 export function ProspectsProvider({ user, children }: { user: Account; children: React.ReactNode }) {
   const [state, setState] = useState<CloudState>(emptyState);
@@ -43,10 +44,12 @@ export function ProspectsProvider({ user, children }: { user: Account; children:
   const service = useMemo(() => createProspectsService(client, user.id), [client, user.id]);
   const generation = useRef(0);
   const busy = useRef(false);
+  const loading = useRef(false);
   const channel = useRef<BroadcastChannel | null>(null);
 
   const loadProspects = useCallback(async () => {
-    if (busy.current) return;
+    if (busy.current || loading.current) return;
+    loading.current = true;
     const request = ++generation.current;
     setState((current) => ({ ...current, error: null }));
     try {
@@ -60,6 +63,8 @@ export function ProspectsProvider({ user, children }: { user: Account; children:
       if (request === generation.current) setState((current) => ({ ...current, prospects, ready: true, error: null, migration, migrationWarning }));
     } catch (error) {
       if (request === generation.current) setState((current) => ({ ...current, error: cloudError(error).message }));
+    } finally {
+      loading.current = false;
     }
   }, [service, user.id]);
 
@@ -76,6 +81,9 @@ export function ProspectsProvider({ user, children }: { user: Account; children:
       channel.current.onmessage = (event) => { if (event.data === user.id) void loadProspects(); };
     }
     const onFocus = () => { void loadProspects(); };
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadProspects();
+    }, AUTO_REFRESH_MS);
     window.addEventListener("focus", onFocus);
     void loadProspects();
     return () => {
@@ -83,6 +91,7 @@ export function ProspectsProvider({ user, children }: { user: Account; children:
       data.subscription.unsubscribe();
       channel.current?.close();
       channel.current = null;
+      window.clearInterval(refreshTimer);
       window.removeEventListener("focus", onFocus);
     };
   }, [client, user.id, loadProspects]);
@@ -92,7 +101,6 @@ export function ProspectsProvider({ user, children }: { user: Account; children:
   async function mutate(change: () => Promise<Change>) {
     if (busy.current || !state.ready) return false;
     busy.current = true;
-    // Invalider une lecture en cours évite qu’elle écrase ensuite une sauvegarde confirmée.
     const request = ++generation.current;
     setState((current) => ({ ...current, busy: true, error: null, notice: null }));
     try {
