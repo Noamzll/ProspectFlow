@@ -15,12 +15,12 @@ export function Sidebar() {
   const { user, signOut, busy } = useProspects();
 
   return (
-    <aside className="flex border-b border-slate-200 bg-white p-4 lg:fixed lg:inset-y-0 lg:w-60 lg:flex-col lg:border-r lg:border-b-0 lg:p-5">
+    <aside className="app-sidebar grid grid-cols-[minmax(0,1fr)_auto] gap-y-3 border-b border-slate-200 bg-white p-4 lg:fixed lg:inset-y-0 lg:flex lg:w-60 lg:flex-col lg:gap-y-0 lg:border-r lg:border-b-0 lg:p-5">
       <Link href="/" aria-label="ProspectFlow — Dashboard" className="flex items-center gap-2.5 font-semibold tracking-tight">
         <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-600 text-white"><Workflow className="size-5" aria-hidden="true" /></span>
         <span>ProspectFlow<span className="block text-[10px] font-medium tracking-widest text-slate-400 uppercase">Votre espace commercial</span></span>
       </Link>
-      <nav aria-label="Navigation principale" className="ml-auto flex items-center gap-2 lg:mt-10 lg:ml-0 lg:block lg:space-y-2">
+      <nav aria-label="Navigation principale" className="col-span-2 row-start-2 flex flex-wrap items-center gap-2 lg:mt-10 lg:block lg:space-y-2">
         {navigation.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 
@@ -36,13 +36,12 @@ export function Sidebar() {
               }`}
             >
               <Icon className="size-4" aria-hidden="true" />
-              <span className="hidden sm:inline">{label}</span>
-              <span className="sr-only sm:hidden">{label}</span>
+              <span>{label}</span>
             </Link>
           );
         })}
       </nav>
-      <button type="button" onClick={() => { void signOut(); }} disabled={busy} className="ml-3 rounded-lg p-2 text-slate-500 hover:bg-slate-50 disabled:opacity-50 lg:mt-6 lg:ml-0 lg:flex lg:items-center lg:gap-3 lg:px-3 lg:text-sm"><LogOut className="size-4" aria-hidden="true" /><span className="hidden lg:inline">Se déconnecter</span><span className="sr-only lg:hidden">Se déconnecter</span></button>
+      <button type="button" onClick={() => { void signOut(); }} disabled={busy} className="col-start-2 row-start-1 min-h-11 min-w-11 self-center rounded-lg p-2 text-slate-500 hover:bg-slate-50 disabled:opacity-50 lg:mt-6 lg:flex lg:items-center lg:gap-3 lg:self-auto lg:px-3 lg:text-sm"><LogOut className="mx-auto size-4 lg:mx-0" aria-hidden="true" /><span className="hidden lg:inline">Se déconnecter</span><span className="sr-only lg:hidden">Se déconnecter</span></button>
       <div className="mt-auto hidden rounded-xl border border-slate-200 bg-slate-50 p-4 lg:block">
         <p className="flex items-center gap-2 text-sm font-medium">Un prospect à la fois <ArrowUpRight className="size-4 text-indigo-500" aria-hidden="true" /></p>
         <p className="mt-2 text-xs leading-5 text-slate-500">Une vue claire pour faire avancer vos prochaines conversations.</p>

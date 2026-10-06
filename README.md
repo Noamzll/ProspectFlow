@@ -23,6 +23,10 @@ Une route serveur sécurisée permet la synchronisation Google Sheet → Supabas
 
 Le [guide complet](google-apps-script/README.md) contient le SQL à exécuter, les variables Netlify, le code Apps Script à installer, le rattachement des prospects existants et un parcours de test isolé. Ne pas activer les écritures avant d'avoir vérifié le compte destinataire et les IDs des prospects déjà présents.
 
+## Installation sur iPhone
+
+Après déploiement, ouvrir ProspectFlow dans Safari → **Partager → Sur l'écran d'accueil → Ajouter**, avec « Ouvrir comme app web » activé si proposé. L'application s'ouvre depuis l'écran d'accueil en mode standalone et nécessite internet. Le [guide iPhone](docs/iphone-pwa.md) détaille l'installation, les tests Safari et les trois vraies icônes à fournir. Aucune icône provisoire ni cache hors ligne des données privées n'est ajouté.
+
 ## Installation locale
 
 Utiliser Node.js 22.18 ou plus récent et pnpm.

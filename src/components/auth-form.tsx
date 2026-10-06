@@ -53,7 +53,7 @@ export function AuthForm({ configured, reason }: { configured: boolean; reason?:
   }
 
   return (
-    <main id="main-content" className="flex min-h-dvh items-center justify-center px-5 py-12">
+    <main id="main-content" className="app-login flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 flex items-center justify-center gap-3 text-xl font-semibold tracking-tight"><span className="flex size-10 items-center justify-center rounded-xl bg-indigo-600 text-white"><Workflow className="size-6" aria-hidden="true" /></span>ProspectFlow</div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
